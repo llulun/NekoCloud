@@ -17,7 +17,26 @@
 *   **🔄 自动同步**：支持后台配置 API，自动定时同步上游流量数据。
 *   **📱 全平台兼容**：完美适配 PC、手机端显示。
 
-## 🛠️ 部署 (Deployment)
+## 🚀 一键安装 (Quick Install)
+
+适用于 **Ubuntu / Debian** 系统。
+
+```bash
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/llulun/NekoCloud/main/install.sh)"
+```
+
+脚本将自动执行以下操作：
+1.  安装 Python3, pip, git 等必要依赖。
+2.  拉取最新代码到 `/opt/NekoCloud`。
+3.  创建虚拟环境并安装依赖。
+4.  配置并启动 `systemd` 系统服务 (开机自启)。
+5.  输出访问地址和默认账号密码。
+
+---
+
+## 🛠️ 手动部署 (Manual Deployment)
+
+如果您不想使用一键脚本，或者使用其他系统，请参考以下步骤：
 
 ### 1. 环境要求
 *   Python 3.8+
