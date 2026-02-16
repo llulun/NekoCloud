@@ -1,0 +1,219 @@
+{% extends "layout.html" %}
+
+{% block title %}仪表盘 - {{ config.get('site_title') }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8 mb-4">
+        <!-- Announcement -->
+        <div class="alert alert-info border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center">
+            <i class="fas fa-bullhorn fa-lg me-3 text-info"></i>
+            <div>
+                <h6 class="alert-heading fw-bold mb-1">系统公告</h6>
+                <p class="mb-0 small text-muted">{{ config.get('announcement') }}</p>
+            </div>
+        </div>
+
+        <!-- Optimized Line -->
+        <div class="card glass-card mb-4 border-0">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title fw-bold text-primary mb-0">
+                        <i class="fas fa-rocket me-2"></i>{{ config.get('line_opt_name', '优化线路') }}
+                    </h5>
+                    <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">极速体验</span>
+                </div>
+                
+                <p class="card-text text-muted small mb-4" style="white-space: pre-line;">
+                    {{ config.get('line_opt_desc') }}
+                </p>
+                
+                <!-- Traffic Bar -->
+                <div class="bg-light p-3 rounded-4 mb-4 border">
+                    <div class="d-flex justify-content-between mb-2">
+                        <small class="text-uppercase text-muted fw-bold">流量使用</small>
+                        <span class="badge bg-white text-dark border shadow-sm">{{ config.get('traffic_used_opt', '0 GB') }} / {{ config.get('traffic_total_opt', '0 GB') }}</span>
+                    </div>
+                    {% set percent_opt = config.get('traffic_used_opt', '0 GB') | traffic_percent(config.get('traffic_total_opt', '1 GB')) %}
+                    <div class="progress mb-2" style="height: 8px; border-radius: 10px;">
+                        <div class="progress-bar bg-primary rounded-pill" role="progressbar" style="width: {{ percent_opt }}%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted"><i class="far fa-clock me-1"></i>到期：{{ config.get('expiration_date_opt') }}</small>
+                        <form method="POST" action="{{ url_for('user_refresh_traffic') }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-link p-0 text-primary small text-decoration-none" title="刷新流量">
+                                <i class="fas fa-sync-alt me-1"></i>刷新
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Get Link -->
+                <div class="d-grid">
+                    <button class="btn btn-primary px-4 py-2" type="button" onclick="getSubscription('opt')">
+                        <i class="far fa-copy me-2"></i>获取并复制订阅链接
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Residential Line -->
+        <div class="card glass-card mb-4 border-0">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title fw-bold text-success mb-0">
+                        <i class="fas fa-home me-2"></i>{{ config.get('line_res_name', '住宅线路') }}
+                    </h5>
+                    <div>
+                        {% if config.get('res_protocol') %}
+                        <span class="badge bg-warning text-dark me-1">{{ config.get('res_protocol') }}</span>
+                        {% endif %}
+                        <span class="badge bg-success-subtle text-success">原生 IP</span>
+                    </div>
+                </div>
+                
+                <p class="card-text text-muted small mb-4" style="white-space: pre-line;">
+                    {{ config.get('line_res_desc') }}
+                </p>
+                
+                <!-- Traffic Bar (New) -->
+                <div class="bg-light p-3 rounded-4 mb-4 border">
+                    <div class="d-flex justify-content-between mb-2">
+                        <small class="text-uppercase text-muted fw-bold">流量使用</small>
+                        <span class="badge bg-white text-dark border shadow-sm">{{ config.get('traffic_used_res', '0 GB') }} / {{ config.get('traffic_total_res', '0 GB') }}</span>
+                    </div>
+                    {% set percent_res = config.get('traffic_used_res', '0 GB') | traffic_percent(config.get('traffic_total_res', '1 GB')) %}
+                    <div class="progress mb-2" style="height: 8px; border-radius: 10px;">
+                        <div class="progress-bar bg-success rounded-pill" role="progressbar" style="width: {{ percent_res }}%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                         <small class="text-muted"><i class="far fa-clock me-1"></i>到期：{{ config.get('expiration_date_res') }}</small>
+                         <a href="{{ url_for('rules') }}" class="text-danger small fw-bold text-decoration-none"><i class="fas fa-exclamation-triangle me-1"></i>查看合规守则</a>
+                    </div>
+                </div>
+
+                <!-- Get Link -->
+                <div class="d-grid">
+                    <button class="btn btn-success px-4 py-2" type="button" onclick="getSubscription('res')">
+                        <i class="far fa-copy me-2"></i>获取并复制订阅链接
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Account Status -->
+        <div class="card glass-card mb-4 border-0 text-center p-4">
+            <div class="mb-3">
+                <div class="avatar-circle bg-primary-subtle text-primary mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; border-radius: 50%;">
+                    <i class="fas fa-user-circle fa-3x"></i>
+                </div>
+                <h5 class="fw-bold">{{ config.get('user_role') }}</h5>
+                <span class="badge bg-success rounded-pill px-3">状态：{{ config.get('status') }}</span>
+            </div>
+            <div class="row text-center mt-3 g-2">
+                <div class="col-6">
+                    <div class="p-2 bg-light rounded-3 border">
+                        <small class="d-block text-muted mb-1">速度限制</small>
+                        <span class="fw-bold text-dark">{{ config.get('speed_limit') }}</span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-2 bg-light rounded-3 border">
+                        <small class="d-block text-muted mb-1">设备限制</small>
+                        <span class="fw-bold text-dark">5 台</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Downloads -->
+        <div class="card glass-card mb-4 border-0">
+            <div class="card-header bg-transparent border-0 fw-bold pt-4 px-4">
+                <i class="fas fa-download me-2 text-primary"></i>客户端下载 (Clash Mi)
+            </div>
+            <div class="card-body px-4 pb-4">
+                <div class="list-group list-group-flush">
+                    {% if config.get('dl_ios_stable') %}
+                    <a href="{{ config.get('dl_ios_stable') }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 rounded-3 mb-2 bg-light">
+                        <span><i class="fab fa-apple me-2"></i>iOS (App Store)</span>
+                        <i class="fas fa-chevron-right small text-muted"></i>
+                    </a>
+                    {% endif %}
+                    {% if config.get('dl_ios_beta') %}
+                    <a href="{{ config.get('dl_ios_beta') }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 rounded-3 mb-2 bg-light">
+                        <span><i class="fab fa-apple me-2"></i>iOS (TestFlight)</span>
+                        <i class="fas fa-chevron-right small text-muted"></i>
+                    </a>
+                    {% endif %}
+                    {% if config.get('dl_android_stable') %}
+                    <a href="{{ config.get('dl_android_stable') }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 rounded-3 mb-2 bg-light">
+                        <span><i class="fab fa-android me-2 text-success"></i>Android</span>
+                        <i class="fas fa-chevron-right small text-muted"></i>
+                    </a>
+                    {% endif %}
+                    {% if config.get('dl_windows_stable') %}
+                    <a href="{{ config.get('dl_windows_stable') }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 rounded-3 mb-2 bg-light">
+                        <span><i class="fab fa-windows me-2 text-primary"></i>Windows</span>
+                        <i class="fas fa-chevron-right small text-muted"></i>
+                    </a>
+                    {% endif %}
+                    {% if config.get('dl_macos_stable') %}
+                    <a href="{{ config.get('dl_macos_stable') }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 rounded-3 mb-2 bg-light">
+                        <span><i class="fab fa-apple me-2"></i>macOS</span>
+                        <i class="fas fa-chevron-right small text-muted"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Disclaimer -->
+        <div class="text-center text-muted small px-3">
+            <p>{{ config.get('disclaimer_text') }}</p>
+        </div>
+    </div>
+</div>
+
+<script>
+async function getSubscription(type) {
+    try {
+        const response = await fetch(`/get_subscription/${type}`);
+        const data = await response.json();
+        
+        if (data.redirect) {
+            window.location.href = data.redirect;
+            return;
+        }
+        
+        if (data.link) {
+            navigator.clipboard.writeText(data.link).then(function() {
+                alert("✅ 订阅链接已复制！\n\n请在客户端中粘贴使用。");
+            }, function(err) {
+                // Fallback for older browsers or non-secure contexts
+                const textArea = document.createElement("textarea");
+                textArea.value = data.link;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    alert("✅ 订阅链接已复制！\n\n请在客户端中粘贴使用。");
+                } catch (err) {
+                    alert("复制失败，请手动复制：" + data.link);
+                }
+                document.body.removeChild(textArea);
+            });
+        } else {
+             alert("获取订阅链接失败：" + (data.error || "未知错误"));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert("网络错误，请稍后再试。");
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block title %}登录 - {{ config.get('site_title') }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
+        <div class="glass-card text-center p-5">
+            <div class="mb-4">
+                <i class="fas fa-cat fa-3x text-primary mb-3"></i>
+                <h3 class="fw-bold">{{ config.get('site_title') }}</h3>
+                <p class="text-muted small">欢迎回来，请登录您的账户</p>
+            </div>
+            
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+                    <label for="username"><i class="fas fa-user me-2"></i>用户名</label>
+                </div>
+                <div class="form-floating mb-4">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                    <label for="password"><i class="fas fa-lock me-2"></i>密码</label>
+                </div>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                        <i class="fas fa-sign-in-alt me-2"></i>立即登录
+                    </button>
+                </div>
+            </form>
+            
+            <div class="mt-4 pt-3 border-top">
+                <small class="text-muted">如遇登录问题，请联系管理员</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

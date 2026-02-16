@@ -1,0 +1,227 @@
+{% extends "layout.html" %}
+
+{% block title %}后台管理 - {{ config.get('site_title') }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 offset-lg-2">
+        <div class="card glass-card border-0 mb-4">
+            <div class="card-header bg-transparent border-bottom p-4">
+                <h5 class="m-0 font-weight-bold text-primary"><i class="fas fa-cogs me-2"></i>后台设置</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <!-- 1. 网站基础配置 -->
+                    <h6 class="text-secondary fw-bold text-uppercase small mb-3">网站基础配置</h6>
+                    <div class="mb-3">
+                        <label for="site_title" class="form-label">网站标题</label>
+                        <input type="text" class="form-control" id="site_title" name="site_title" value="{{ config.get('site_title') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="announcement" class="form-label">公告内容</label>
+                        <textarea class="form-control" id="announcement" name="announcement" rows="2">{{ config.get('announcement') }}</textarea>
+                    </div>
+
+                    <hr class="my-4 border-light">
+                    
+                    <!-- 2. 流量信息同步源 -->
+                    <h6 class="text-secondary fw-bold text-uppercase small mb-3">流量信息同步源 (Backend)</h6>
+                    <div class="card bg-light border-0 mb-3">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="fetch_info_url_opt" class="form-label">优化线路 - 获取链接</label>
+                                <div class="input-group">
+                                    <input type="url" class="form-control" id="fetch_info_url_opt" name="fetch_info_url_opt" value="{{ config.get('fetch_info_url_opt') }}" placeholder="输入用于同步流量的链接">
+                                    <button class="btn btn-primary" type="submit" formaction="{{ url_for('refresh_info') }}">同步</button>
+                                </div>
+                            </div>
+                            <div class="mb-0">
+                                <label for="fetch_info_url_res" class="form-label">住宅线路 - 获取链接</label>
+                                <div class="input-group">
+                                    <input type="url" class="form-control" id="fetch_info_url_res" name="fetch_info_url_res" value="{{ config.get('fetch_info_url_res') }}" placeholder="输入用于同步流量的链接">
+                                    <button class="btn btn-success text-white" type="submit" formaction="{{ url_for('refresh_info') }}">同步</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. 用户可见订阅链接 -->
+                    <h6 class="text-secondary fw-bold text-uppercase small mb-3">用户订阅链接 (Frontend)</h6>
+                    <div class="mb-3">
+                        <label for="sub_link_optimized" class="form-label">优化线路订阅链接</label>
+                        <input type="url" class="form-control" id="sub_link_optimized" name="sub_link_optimized" value="{{ config.get('sub_link_optimized') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="sub_link_residential" class="form-label">住宅线路订阅链接</label>
+                        <input type="url" class="form-control" id="sub_link_residential" name="sub_link_residential" value="{{ config.get('sub_link_residential') }}">
+                    </div>
+                    
+                    <hr class="my-4 border-light">
+
+                    <!-- 4. 线路数据 (手动/自动) -->
+                    <div class="row">
+                        <!-- Optimized Data -->
+                        <div class="col-md-6 border-end">
+                            <h6 class="text-primary fw-bold text-uppercase small mb-3">优化线路数据</h6>
+                            <div class="mb-2">
+                                <label for="traffic_total_opt" class="form-label small text-muted">总流量</label>
+                                <input type="text" class="form-control form-control-sm" id="traffic_total_opt" name="traffic_total_opt" value="{{ config.get('traffic_total_opt') }}">
+                            </div>
+                            <div class="mb-2">
+                                <label for="traffic_used_opt" class="form-label small text-muted">已用流量</label>
+                                <input type="text" class="form-control form-control-sm" id="traffic_used_opt" name="traffic_used_opt" value="{{ config.get('traffic_used_opt') }}">
+                            </div>
+                            <div class="mb-2">
+                                <label for="expiration_date_opt" class="form-label small text-muted">到期时间</label>
+                                <input type="text" class="form-control form-control-sm" id="expiration_date_opt" name="expiration_date_opt" value="{{ config.get('expiration_date_opt') }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Residential Data -->
+                        <div class="col-md-6">
+                            <h6 class="text-success fw-bold text-uppercase small mb-3">住宅线路数据</h6>
+                            <div class="mb-2">
+                                <label for="traffic_total_res" class="form-label small text-muted">总流量</label>
+                                <input type="text" class="form-control form-control-sm" id="traffic_total_res" name="traffic_total_res" value="{{ config.get('traffic_total_res') }}">
+                            </div>
+                            <div class="mb-2">
+                                <label for="traffic_used_res" class="form-label small text-muted">已用流量</label>
+                                <input type="text" class="form-control form-control-sm" id="traffic_used_res" name="traffic_used_res" value="{{ config.get('traffic_used_res') }}">
+                            </div>
+                            <div class="mb-2">
+                                <label for="expiration_date_res" class="form-label small text-muted">到期时间</label>
+                                <input type="text" class="form-control form-control-sm" id="expiration_date_res" name="expiration_date_res" value="{{ config.get('expiration_date_res') }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4 border-light">
+
+                    <!-- 5. 线路详情 (名称描述) -->
+                    <h6 class="text-secondary fw-bold text-uppercase small mb-3">线路详情描述</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="line_opt_name" class="form-label">优化线路名称</label>
+                                <input type="text" class="form-control" id="line_opt_name" name="line_opt_name" value="{{ config.get('line_opt_name') }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="line_opt_desc" class="form-label">优化线路描述</label>
+                                <textarea class="form-control" id="line_opt_desc" name="line_opt_desc" rows="4">{{ config.get('line_opt_desc') }}</textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="line_res_name" class="form-label">住宅线路名称</label>
+                                <input type="text" class="form-control" id="line_res_name" name="line_res_name" value="{{ config.get('line_res_name') }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="line_res_desc" class="form-label">住宅线路描述</label>
+                                <textarea class="form-control" id="line_res_desc" name="line_res_desc" rows="4">{{ config.get('line_res_desc') }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="res_protocol" class="form-label">住宅线路协议</label>
+                                <input type="text" class="form-control" id="res_protocol" name="res_protocol" value="{{ config.get('res_protocol') }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4 border-light">
+
+                    <!-- 6. 账户状态 -->
+                    <h6 class="text-secondary fw-bold text-uppercase small mb-3">账户状态</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="speed_limit" class="form-label">速度限制</label>
+                            <input type="text" class="form-control" id="speed_limit" name="speed_limit" value="{{ config.get('speed_limit') }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="status" class="form-label">账户状态</label>
+                            <input type="text" class="form-control" id="status" name="status" value="{{ config.get('status') }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="user_role" class="form-label">用户权限</label>
+                            <input type="text" class="form-control" id="user_role" name="user_role" value="{{ config.get('user_role') }}">
+                        </div>
+                    </div>
+
+                    <hr class="my-4 border-light">
+
+                    <!-- 7. 规则与声明 -->
+                    <h6 class="text-secondary fw-bold text-uppercase small mb-3">规则与声明</h6>
+                    <div class="mb-3">
+                        <label for="rules_text" class="form-label">使用规则 (HTML)</label>
+                        <textarea class="form-control" id="rules_text" name="rules_text" rows="4">{{ config.get('rules_text') }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="disclaimer_text" class="form-label">底部声明</label>
+                        <textarea class="form-control" id="disclaimer_text" name="disclaimer_text" rows="2">{{ config.get('disclaimer_text') }}</textarea>
+                    </div>
+
+                    <hr class="my-4 border-light">
+
+                    <!-- 8. 客户端下载 -->
+                    <h6 class="text-secondary fw-bold text-uppercase small mb-3">客户端下载链接</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label for="dl_ios_stable" class="form-label small">iOS (App Store)</label>
+                            <input type="url" class="form-control form-control-sm" id="dl_ios_stable" name="dl_ios_stable" value="{{ config.get('dl_ios_stable') }}">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="dl_ios_beta" class="form-label small">iOS (TestFlight)</label>
+                            <input type="url" class="form-control form-control-sm" id="dl_ios_beta" name="dl_ios_beta" value="{{ config.get('dl_ios_beta') }}">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="dl_android_stable" class="form-label small">Android (稳定版)</label>
+                            <input type="url" class="form-control form-control-sm" id="dl_android_stable" name="dl_android_stable" value="{{ config.get('dl_android_stable') }}">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label for="dl_windows_stable" class="form-label small">Windows</label>
+                            <input type="url" class="form-control form-control-sm" id="dl_windows_stable" name="dl_windows_stable" value="{{ config.get('dl_windows_stable') }}">
+                        </div>
+                    </div>
+
+                    <hr class="my-4 border-light">
+
+                    <!-- 9. 账号管理 -->
+                    <h6 class="text-secondary fw-bold text-uppercase small mb-3">账号管理</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card bg-light border-0">
+                                <div class="card-body">
+                                    <h6 class="card-title fw-bold">用户账号</h6>
+                                    <div class="mb-2">
+                                        <label for="user_username" class="form-label small">用户名</label>
+                                        <input type="text" class="form-control form-control-sm" id="user_username" name="user_username" value="{{ config.get('user_username') }}" required>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="user_password" class="form-label small">密码</label>
+                                        <input type="text" class="form-control form-control-sm" id="user_password" name="user_password" value="{{ config.get('user_password') }}" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-danger-subtle border-0">
+                                <div class="card-body">
+                                    <h6 class="card-title fw-bold text-danger">管理员账号</h6>
+                                    <div class="mb-2">
+                                        <label for="admin_password" class="form-label small">管理员密码</label>
+                                        <input type="text" class="form-control form-control-sm" id="admin_password" name="admin_password" value="{{ config.get('admin_password') }}" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-5 mb-5">
+                        <button type="submit" class="btn btn-primary btn-lg shadow-lg"><i class="fas fa-save me-2"></i>保存所有更改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
