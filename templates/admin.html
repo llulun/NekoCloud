@@ -8,6 +8,11 @@
         <div class="card glass-card border-0 mb-4">
             <div class="card-header bg-transparent border-bottom p-4">
                 <h5 class="m-0 font-weight-bold text-primary"><i class="fas fa-cogs me-2"></i>后台设置</h5>
+                {% if config.get('_meta_last_updated') %}
+                <small class="text-muted d-block mt-2">
+                    <i class="far fa-clock me-1"></i>最近保存时间：{{ config.get('_meta_last_updated') }}
+                </small>
+                {% endif %}
             </div>
             <div class="card-body p-4">
                 <form method="POST">
