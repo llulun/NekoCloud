@@ -36,11 +36,17 @@
                         <span class="badge bg-white text-dark border shadow-sm">{{ config.get('traffic_used_opt', '0 GB') }} / {{ config.get('traffic_total_opt', '0 GB') }}</span>
                     </div>
                     {% set percent_opt = config.get('traffic_used_opt', '0 GB') | traffic_percent(config.get('traffic_total_opt', '1 GB')) %}
+                    {% set opt_bar_class = 'bg-danger' if percent_opt >= 90 else ('bg-warning' if percent_opt >= 70 else 'bg-primary') %}
                     <div class="progress mb-2" style="height: 8px; border-radius: 10px;">
-                        <div class="progress-bar bg-primary rounded-pill" role="progressbar" style="width: {{ percent_opt }}%"></div>
+                        <div class="progress-bar {{ opt_bar_class }} rounded-pill" role="progressbar" style="width: {{ percent_opt }}%"></div>
                     </div>
                     <div class="d-flex justify-content-between">
                         <small class="text-muted"><i class="far fa-clock me-1"></i>到期：{{ config.get('expiration_date_opt') }}</small>
+                        <small class="fw-bold {{ 'text-danger' if percent_opt >= 90 else ('text-warning' if percent_opt >= 70 else 'text-primary') }}">
+                            使用率 {{ '%.1f'|format(percent_opt) }}%
+                        </small>
+                    </div>
+                    <div class="d-flex justify-content-end">
                         <form method="POST" action="{{ url_for('user_refresh_traffic') }}" class="d-inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-link p-0 text-primary small text-decoration-none" title="刷新流量">
@@ -52,7 +58,7 @@
 
                 <!-- Get Link -->
                 <div class="d-grid">
-                    <button class="btn btn-primary px-4 py-2" type="button" onclick="getSubscription('opt')">
+                    <button class="btn btn-primary px-4 py-2" type="button" data-line="opt" onclick="getSubscription(this)">
                         <i class="far fa-copy me-2"></i>获取并复制订阅链接
                     </button>
                 </div>
@@ -85,18 +91,24 @@
                         <span class="badge bg-white text-dark border shadow-sm">{{ config.get('traffic_used_res', '0 GB') }} / {{ config.get('traffic_total_res', '0 GB') }}</span>
                     </div>
                     {% set percent_res = config.get('traffic_used_res', '0 GB') | traffic_percent(config.get('traffic_total_res', '1 GB')) %}
+                    {% set res_bar_class = 'bg-danger' if percent_res >= 90 else ('bg-warning' if percent_res >= 70 else 'bg-success') %}
                     <div class="progress mb-2" style="height: 8px; border-radius: 10px;">
-                        <div class="progress-bar bg-success rounded-pill" role="progressbar" style="width: {{ percent_res }}%"></div>
+                        <div class="progress-bar {{ res_bar_class }} rounded-pill" role="progressbar" style="width: {{ percent_res }}%"></div>
                     </div>
                     <div class="d-flex justify-content-between">
                          <small class="text-muted"><i class="far fa-clock me-1"></i>到期：{{ config.get('expiration_date_res') }}</small>
+                         <small class="fw-bold {{ 'text-danger' if percent_res >= 90 else ('text-warning' if percent_res >= 70 else 'text-success') }}">
+                            使用率 {{ '%.1f'|format(percent_res) }}%
+                        </small>
+                    </div>
+                    <div class="d-flex justify-content-end">
                          <a href="{{ url_for('rules') }}" class="text-danger small fw-bold text-decoration-none"><i class="fas fa-exclamation-triangle me-1"></i>查看合规守则</a>
                     </div>
                 </div>
 
                 <!-- Get Link -->
                 <div class="d-grid">
-                    <button class="btn btn-success px-4 py-2" type="button" onclick="getSubscription('res')">
+                    <button class="btn btn-success px-4 py-2" type="button" data-line="res" onclick="getSubscription(this)">
                         <i class="far fa-copy me-2"></i>获取并复制订阅链接
                     </button>
                 </div>
@@ -180,7 +192,35 @@
 </div>
 
 <script>
-async function getSubscription(type) {
+function showDashboardToast(message, type = 'success') {
+    const toastEl = document.getElementById('dashboardToast');
+    toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+    toastEl.querySelector('.toast-body').textContent = message;
+    const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 2500 });
+    toast.show();
+}
+
+function fallbackCopy(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    let copied = false;
+    try {
+        copied = document.execCommand('copy');
+    } catch (err) {
+        copied = false;
+    }
+    document.body.removeChild(textArea);
+    return copied;
+}
+
+async function getSubscription(button) {
+    const type = button.dataset.line;
+    const originalHTML = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>处理中...';
+
     try {
         const response = await fetch(`/get_subscription/${type}`);
         const data = await response.json();
@@ -191,29 +231,44 @@ async function getSubscription(type) {
         }
         
         if (data.link) {
-            navigator.clipboard.writeText(data.link).then(function() {
-                alert("✅ 订阅链接已复制！\n\n请在客户端中粘贴使用。");
-            }, function(err) {
-                // Fallback for older browsers or non-secure contexts
-                const textArea = document.createElement("textarea");
-                textArea.value = data.link;
-                document.body.appendChild(textArea);
-                textArea.select();
+            let copied = false;
+            if (navigator.clipboard && window.isSecureContext) {
                 try {
-                    document.execCommand('copy');
-                    alert("✅ 订阅链接已复制！\n\n请在客户端中粘贴使用。");
+                    await navigator.clipboard.writeText(data.link);
+                    copied = true;
                 } catch (err) {
-                    alert("复制失败，请手动复制：" + data.link);
+                    copied = false;
                 }
-                document.body.removeChild(textArea);
-            });
+            }
+
+            if (!copied) {
+                copied = fallbackCopy(data.link);
+            }
+
+            if (copied) {
+                showDashboardToast('订阅链接已复制，可直接粘贴到客户端。', 'success');
+            } else {
+                showDashboardToast(`复制失败，请手动复制：${data.link}`, 'warning');
+            }
         } else {
-             alert("获取订阅链接失败：" + (data.error || "未知错误"));
+            showDashboardToast("获取订阅链接失败：" + (data.error || "未知错误"), 'danger');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert("网络错误，请稍后再试。");
+        showDashboardToast("网络错误，请稍后再试。", 'danger');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalHTML;
     }
 }
 </script>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+    <div id="dashboardToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
 {% endblock %}
