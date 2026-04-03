@@ -11,11 +11,11 @@ from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 import shutil
 import re
+import secrets
 
 app = Flask(__name__)
 
 # Generate a strong key or load from env
-import secrets
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 
 # Security Configuration
