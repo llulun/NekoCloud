@@ -41,6 +41,14 @@ if [ ! -d ".git" ]; then
     exit 1
 fi
 
+has_nekocloud_service() {
+    if systemctl cat nekocloud >/dev/null 2>&1; then
+        return 0
+    fi
+
+    systemctl list-unit-files --type=service --all --no-legend 2>/dev/null | grep -q '^nekocloud\.service'
+}
+
 echo -e "${YELLOW}[1/5] 创建更新前备份...${NC}"
 mkdir -p "$BACKUP_DIR"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -108,7 +116,9 @@ pip install -r requirements.txt
 pip install waitress
 
 echo -e "${YELLOW}[4/5] 重载并重启服务...${NC}"
-if systemctl list-unit-files | grep -q '^nekocloud\.service'; then
+SERVICE_EXISTS=0
+if has_nekocloud_service; then
+    SERVICE_EXISTS=1
     systemctl daemon-reload
     systemctl restart nekocloud
 else
@@ -116,7 +126,7 @@ else
 fi
 
 echo -e "${YELLOW}[5/5] 检查服务状态...${NC}"
-if systemctl list-unit-files | grep -q '^nekocloud\.service'; then
+if [ "$SERVICE_EXISTS" -eq 1 ]; then
     if systemctl is-active --quiet nekocloud; then
         echo -e "${GREEN}✅ 更新完成，nekocloud 服务运行正常。${NC}"
     else
