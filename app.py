@@ -11,6 +11,7 @@ from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 import shutil
 import re
+import subprocess
 
 app = Flask(__name__)
 
@@ -40,6 +41,36 @@ CONFIG_FILE = 'config.json'
 BACKUP_DIR = 'backups'
 MAX_BACKUP_FILES = 20
 BACKUP_PATTERN = re.compile(r'^config_backup_\d{8}_\d{6}\.json$')
+
+
+def get_app_version():
+    """
+    Resolve app version from deployment/build metadata.
+    Priority: explicit env var -> git describe -> unknown.
+    """
+    env_version = os.environ.get('APP_VERSION') or os.environ.get('NEKOCLOUD_VERSION')
+    if env_version:
+        return env_version.strip()
+
+    try:
+        git_version = subprocess.check_output(
+            ['git', 'describe', '--tags', '--always', '--dirty'],
+            stderr=subprocess.DEVNULL,
+            text=True
+        ).strip()
+        if git_version:
+            return git_version
+    except Exception:
+        app.logger.warning("APP_VERSION not set and git describe is unavailable; using fallback version.")
+
+    return "unknown"
+
+
+@app.context_processor
+def inject_global_template_vars():
+    return {
+        'app_version': get_app_version()
+    }
 
 def create_config_backup():
     """Create timestamped config backups and keep only the latest N files."""

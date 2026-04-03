@@ -34,6 +34,21 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/llulun/NekoCloud/ma
 4.  配置并启动 `systemd` 系统服务 (开机自启)。
 5.  输出访问地址和默认账号密码。
 
+## 🔄 一键更新 (Quick Update)
+
+如果已通过脚本安装到 `/opt/NekoCloud`，可使用以下命令一键更新：
+
+```bash
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/llulun/NekoCloud/main/update.sh)"
+```
+
+更新脚本会自动执行：
+1.  备份 `config.json` 与历史备份目录到 `/opt/NekoCloud_update_backups/`。
+2.  以远端默认分支为目标强制同步代码（`git fetch --all --prune` + `git reset --hard`）。
+3.  自动恢复更新前备份的运行时配置（`config.json` 与 `backups/`）。
+4.  更新虚拟环境依赖（含 `waitress`）。
+5.  自动重启 `nekocloud` 服务（若已安装为 systemd 服务）。
+
 ---
 
 ## 🛠️ 手动部署 (Manual Deployment)
