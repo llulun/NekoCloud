@@ -10,6 +10,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 import shutil
+import re
 
 app = Flask(__name__)
 
@@ -36,6 +37,69 @@ app.logger.setLevel(logging.INFO)
 app.logger.info('NekoCloud startup')
 
 CONFIG_FILE = 'config.json'
+BACKUP_DIR = 'backups'
+MAX_BACKUP_FILES = 20
+BACKUP_PATTERN = re.compile(r'^config_backup_\d{8}_\d{6}\.json$')
+APP_VERSION = 'v1.2.0'
+
+@app.context_processor
+def inject_global_template_vars():
+    return {'app_version': APP_VERSION}
+
+def create_config_backup():
+    """Create timestamped config backups and keep only the latest N files."""
+    if not os.path.exists(CONFIG_FILE):
+        return
+
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    backup_path = os.path.join(BACKUP_DIR, f'config_backup_{timestamp}.json')
+    shutil.copy(CONFIG_FILE, backup_path)
+
+    backup_files = sorted(
+        [
+            f for f in os.listdir(BACKUP_DIR)
+            if f.startswith('config_backup_') and f.endswith('.json')
+        ]
+    )
+    old_files = backup_files[:-MAX_BACKUP_FILES]
+    for old_file in old_files:
+        old_path = os.path.join(BACKUP_DIR, old_file)
+        try:
+            os.remove(old_path)
+        except OSError as e:
+            app.logger.warning(f"Failed to remove old backup {old_path}: {e}")
+
+def list_config_backups():
+    """Return available config backups sorted from newest to oldest."""
+    if not os.path.isdir(BACKUP_DIR):
+        return []
+
+    backup_files = [
+        f for f in os.listdir(BACKUP_DIR)
+        if BACKUP_PATTERN.match(f)
+    ]
+    return sorted(backup_files, reverse=True)
+
+def restore_config_backup(backup_name):
+    """Restore config.json from a backup file in BACKUP_DIR."""
+    if not BACKUP_PATTERN.match(backup_name):
+        return False, "备份文件名不合法。"
+
+    backup_path = os.path.join(BACKUP_DIR, backup_name)
+    if not os.path.exists(backup_path):
+        return False, "备份文件不存在。"
+
+    try:
+        with open(backup_path, 'r', encoding='utf-8') as f:
+            restored_config = json.load(f)
+    except Exception:
+        return False, "备份文件内容损坏，无法恢复。"
+
+    if not save_config(restored_config):
+        return False, "写入配置失败，请查看日志。"
+
+    return True, "配置已从备份恢复。"
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
@@ -49,9 +113,7 @@ def load_config():
 
 def save_config(config):
     try:
-        # Create backup
-        if os.path.exists(CONFIG_FILE):
-            shutil.copy(CONFIG_FILE, CONFIG_FILE + '.bak')
+        create_config_backup()
             
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=4, ensure_ascii=False)
@@ -354,7 +416,18 @@ def admin_dashboard():
             
         return redirect(url_for('admin_dashboard'))
         
-    return render_template('admin.html', config=config)
+    backups = list_config_backups()
+    return render_template('admin.html', config=config, backups=backups)
+
+@app.route('/admin/restore_backup', methods=['POST'])
+def restore_backup():
+    if 'admin_logged_in' not in session:
+        return redirect(url_for('login'))
+
+    backup_name = request.form.get('backup_name', '').strip()
+    success, message = restore_config_backup(backup_name)
+    flash(message, 'success' if success else 'danger')
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/refresh_info', methods=['POST'])
 def refresh_info():
