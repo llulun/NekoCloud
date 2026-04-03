@@ -14,6 +14,7 @@ NC='\033[0m' # No Color
 
 INSTALL_DIR="/opt/NekoCloud"
 BACKUP_DIR="/opt/NekoCloud_update_backups"
+STASH_NAME="nekocloud_update_$(date +%Y%m%d_%H%M%S)"
 
 # 检查是否以 root 运行
 if [[ $EUID -ne 0 ]]; then
@@ -56,8 +57,45 @@ fi
 
 echo -e "${YELLOW}[2/5] 拉取最新代码...${NC}"
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# 避免本地改动（尤其是 config.json）导致 git pull 失败
+HAS_LOCAL_CHANGES=0
+if ! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
+    HAS_LOCAL_CHANGES=1
+    echo -e "${YELLOW}检测到本地改动，正在临时保存...${NC}"
+    git stash push --include-untracked -m "$STASH_NAME"
+fi
+
+if ! git show-ref --verify --quiet "refs/remotes/origin/$CURRENT_BRANCH"; then
+    echo -e "${YELLOW}未在远端找到分支 ${CURRENT_BRANCH}，尝试使用 origin/HEAD。${NC}"
+    CURRENT_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+fi
+
+if [ -z "$CURRENT_BRANCH" ]; then
+    echo -e "${RED}错误: 无法确定可更新的分支。${NC}"
+    exit 1
+fi
+
 git fetch origin "$CURRENT_BRANCH"
 git pull --ff-only origin "$CURRENT_BRANCH"
+
+# 还原用户实际运行所需配置，避免更新覆盖
+if [ -f "$CURRENT_BACKUP/config.json" ]; then
+    cp "$CURRENT_BACKUP/config.json" config.json
+fi
+
+if [ -d "$CURRENT_BACKUP/backups" ]; then
+    rm -rf backups
+    cp -r "$CURRENT_BACKUP/backups" backups
+fi
+
+if [ "$HAS_LOCAL_CHANGES" -eq 1 ]; then
+    echo -e "${YELLOW}正在恢复更新前的本地改动快照...${NC}"
+    if ! git stash pop --index >/dev/null 2>&1; then
+        echo -e "${YELLOW}本地改动未自动恢复（可能存在冲突），已保留在 stash。${NC}"
+        echo -e "可使用 ${YELLOW}git stash list${NC} / ${YELLOW}git stash show -p${NC} 手动检查。"
+    fi
+fi
 
 echo -e "${YELLOW}[3/5] 更新 Python 依赖...${NC}"
 if [ ! -d venv ]; then
