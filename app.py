@@ -113,7 +113,6 @@ def load_config():
 
 def save_config(config):
     try:
-        config['_meta_last_updated'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         create_config_backup()
             
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
